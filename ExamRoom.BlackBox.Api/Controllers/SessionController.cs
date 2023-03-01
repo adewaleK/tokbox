@@ -5,6 +5,8 @@ using Microsoft.Extensions.Options;
 using System.Data.Common;
 using System.Data;
 using OpenTokSDK;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
+using Microsoft.AspNetCore.DataProtection;
 
 namespace ExamRoom.BlackBox.Api.Controllers
 {
@@ -19,15 +21,38 @@ namespace ExamRoom.BlackBox.Api.Controllers
             _config = config;
         }
 
+        [HttpGet("session-page")]
 
-        [HttpPost("CreateSession")]
-        public ActionResult<SessionResponse> CreateSession(string name, MediaMode mediaMode = MediaMode.ROUTED, ArchiveMode archiveMode = ArchiveMode.ALWAYS)
+        public ContentResult GetSessionPage()
         {
+            var html = System.IO.File.ReadAllText(@"./assets/session.html");
+            return base.Content(html, "text/html");
+        }
+
+        [HttpGet("index-page")]
+        public ContentResult GetIndexPage()
+        {
+            var html = System.IO.File.ReadAllText(@"./assets/index.html");
+            return base.Content(html, "text/html");
+        }
+
+        [HttpPost()]
+        public ActionResult<SessionResponse> CreateSession()
+        {
+            MediaMode mediaMode = MediaMode.ROUTED;
+            ArchiveMode archiveMode = ArchiveMode.ALWAYS;
             OpenTokService();
             var session = OpenTok.CreateSession(String.Empty, mediaMode, archiveMode);
-
+            string apiKeyString = _config.Value.API_KEY;
+            int apiKey;
+            
+            apiKey = Convert.ToInt32(apiKeyString);
             var res = new SessionResponse();
-            res.SessionId = session.Id;
+            var sessionId = session.Id;
+            res.SessionId = sessionId;
+            res.Token = OpenTok.GenerateToken(sessionId);
+
+            res.API_KEY = apiKey;
             return Ok(res);
         }
         private void OpenTokService()
